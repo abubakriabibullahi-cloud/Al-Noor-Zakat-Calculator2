@@ -1,0 +1,40 @@
+- name: Extract project ZIP
+        shell: bash
+        run: |
+          set -e
+
+          echo "Repository contents:"
+          ls -la
+
+          ZIP_FILE="$(find . -type f -iname '*.zip' \
+            ! -path './.git/*' -print -quit)"
+
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: No ZIP file found in the repository."
+            exit 1
+          fi
+
+          echo "Extracting: $ZIP_FILE"
+          mkdir -p extracted
+          unzip -o -q "$ZIP_FILE" -d extracted
+
+          echo "Searching for Gradle settings files:"
+          find extracted -type f \
+            \( -name 'settings.gradle' \
+            -o -name 'settings.gradle.kts' \) -print
+
+          PROJECT_DIR="$(find extracted -type f \
+            \( -name 'settings.gradle' \
+            -o -name 'settings.gradle.kts' \) \
+            -print -quit | xargs -r dirname)"
+
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: Gradle settings file not found."
+            echo "Extracted files:"
+            find extracted -maxdepth 6 -type f -print
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project found: $PROJECT_DIR"
+          ls -la "$PROJECT_DIR"
